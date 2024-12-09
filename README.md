@@ -1,1 +1,1 @@
-pre and post-processing scripts for LATTE package.
+pre and post-processing scripts.
