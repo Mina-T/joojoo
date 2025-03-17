@@ -5,15 +5,15 @@ mkdir validation
 cp sample.job train.ini  *pkl validation
 cd validation  
 
-d='#SBATCH -A'
-p='#SBATCH -A CNHPC_1491920'
-sed -i "s%$d.*%$p%g"  sample.job
+#d='#SBATCH -A'
+#p='#SBATCH -A CNHPC_1491920'
+#sed -i "s%$d.*%$p%g"  sample.job
 
 j='#SBATCH --time'
-k='#SBATCH --time 4:49:00'
+k='#SBATCH --time 13:30:00'
 sed -i "s%$j.*%$k%g"  sample.job
 x='#SBATCH --job-name='
-y='#SBATCH --job-name=val_domains'
+y='#SBATCH --job-name=sk.css'
 sed -i "s%$x.*%$y%g"  sample.job
 
 
@@ -51,21 +51,3 @@ do
        	cd ../  
 done
 
-
-# for dir in $dirs 
-# do
-#        	cd $dir
-# 	echo $dir
-#       	for i in {1..4}
-#        	do
-# 	       	mkdir $i
-# 	      	cp sample.job train.ini  $i
-# 	       	cd $i
-# 	       	sed -i "s%$v$dir$m%$v$dir$m$i%g"  train.ini
-# 	        sbatch sample.job	
-# 	       	echo $i
-# 	        cd ../	
-#        	done 
-#        	cd ../   
-# done
-# 

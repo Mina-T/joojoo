@@ -124,20 +124,16 @@ def RMSE_E(df):
     print('RMSE is ',rmse, ' per atom')
     return rmse
 
-
-           
-class Read_validation:
-    def __init__(self, _path, dirs, sub_dirs):
-        self._path = _path
-        self.dirs = dirs
-        self.sub_dirs = sub_dirs
-
-
-
+def RMSE_F(df):
+    sum_comp = sum((df['fx_nn'] - df['fx_ref'])**2 + (df['fy_nn'] - df['fy_ref'])**2  + (df['fz_nn'] - df['fz_ref'])**2 )
+    avg = (sum_comp / (3 * len(df)))
+    rmse =  (avg)**0.5
+    print(rmse)
+    return rmse
 
 
 class Read_domains_validation:
-    def __init__(self, _path, dirs, sub_dirs, epoch):
+    def __init__(self, _path, dirs, sub_dirs, epoch = None):
         self._path = _path
         self.dirs = dirs
         self.sub_dirs = sub_dirs
@@ -151,12 +147,17 @@ class Read_domains_validation:
                     print(_dir, s_dir, flush = True)
                     p = os.path.join(self._path, _dir, s_dir, 'val/')
                     os.chdir(p)
-                    energy_file = glob.glob(f"epoch_{self.epoch}_step_{self.epoch*1000}.dat")
+                    energy_file = glob.glob("*0.dat")
                     energy_file = read_dat(p, energy_file[0])
+                    if self.epoch:
+                        print(f'reading epoch {self.epoch}')
+                        energy_file = read_dat(p, f'epoch_{self.epoch}_step_{1000*self.epoch}.dat')
                     e_MAE = E_MAE(energy_file)
                     model_validation[_dir]['E_MAE'].append(e_MAE)
-                    force_file = glob.glob(f"epoch_{self.epoch}_step_{self.epoch*1000}_forces.dat")
+                    force_file = glob.glob("*_forces.dat")
                     force_file = read_dat(p, force_file[0])
+                    if self.epoch:
+                        force_file = read_dat(p, f'epoch_{self.epoch}_step_{1000*self.epoch}_forces.dat')
                     f_MAE = F_MAE(force_file)
                     model_validation[_dir]['F_MAE'].append(f_MAE)
                     print(f'MAE_E: {e_MAE}, MAE_F: {f_MAE}', flush = True)
@@ -170,3 +171,15 @@ class Read_domains_validation:
         print(model_validation, flush = True)
         return model_validation
 
+
+def multidata_dataset_err(_path:str, epoch:int, labels):
+    e_df = read_dat(_path,f'epoch_{epoch}_step_{epoch*1000}.dat')
+    f_df = read_dat(_path,f'epoch_{epoch}_step_{epoch*1000}_forces.dat')
+    E_MAEs, F_MAEs = [], []
+    for label in labels:
+        E_mae = E_MAE(e_df.loc[e_df['#filename'].str.contains(label)])
+        F_mae = F_MAE(f_df.loc[f_df['#filename'].str.contains(label)])
+        E_MAEs.append(E_mae)
+        F_MAEs.append(F_mae)
+        print(label , 'E_mae: ', f'{E_mae:.3f}', 'F_mae: ',f'{F_mae:.3f}', flush = True)
+    return E_MAEs, F_MAEs

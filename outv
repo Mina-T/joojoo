@@ -1,0 +1,36 @@
+Thu Aug 22 13:39:12 CEST 2024
+reading from :  /leonardo/home/userexternal/mtaleblo/joojoo
+id/ 1/
+file not found
+id/ 2/
+file not found
+id/ 3/
+file not found
+id/ 4/
+file not found
+ood_ads/ 1/
+file not found
+ood_ads/ 2/
+file not found
+ood_ads/ 3/
+file not found
+ood_ads/ 4/
+file not found
+ood_cat/ 1/
+file not found
+ood_cat/ 2/
+file not found
+ood_cat/ 3/
+file not found
+ood_cat/ 4/
+file not found
+ood_both/ 1/
+file not found
+ood_both/ 2/
+file not found
+ood_both/ 3/
+file not found
+ood_both/ 4/
+file not found
+{'id/': {'E_MAE': [], 'F_MAE': []}, 'ood_ads/': {'E_MAE': [], 'F_MAE': []}, 'ood_cat/': {'E_MAE': [], 'F_MAE': []}, 'ood_both/': {'E_MAE': [], 'F_MAE': []}}
+Thu Aug 22 13:39:15 CEST 2024
