@@ -5,72 +5,88 @@ import torch
 from ase.io import read, write
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
 
 def MACE_pt_to_model(_path, save_path):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
     files = os.listdir(_path)
+    files = [f for f in files if f.endswith('.pt')]
+    if len(files) > 15:
+        step  = len(files) // 15
+        files = files[::step+1]
     for f in files:
-        if f.endswith('.pt'):
             ckpt = torch.load(os.path.join(_path, f), map_location=torch.device('cpu'))
             model = torch.load(os.path.join(_path, "MACE_model_run-123.model"), map_location=torch.device('cpu'))
             model.load_state_dict(ckpt["model"])
             name = f.replace('.pt', '.model')
-            torch.save(model, os.path.join(p, save_path, name))
+            torch.save(model, os.path.join(_path, save_path, name))
 
 
 
-def validate_mace(f_ref, f_mace):
+def validate_mace(file_ref, file_mace):
     '''
-    Given the reference and validated files, returns a dataframe including ref_E and mace_E per atom.
+    Given the reference and validated files, returns a dataframe including ref_F and mace_F.
     '''
-    ref_data = read(f_ref, index=':')
+    ref_data = read(file_ref, index=':')
     E_ref = {}
+    F_ref = {}
     for sys in ref_data:
         idx = ref_data.index(sys)
         cat = sys.info['category']
         n=len(sys.get_atomic_numbers())
         e = sys.get_total_energy()
+        force = sys.get_forces()
+        fx = force[:,0]
         E_ref[f'{idx}_{cat}'] = e/n
-
-    df = pd.DataFrame({'Mace': [None]*len(E_ref), 'Ref': [None]*len(E_ref)})
-    E_ref_df = pd.DataFrame(list(E_ref.items()), columns=['idx', 'Ref'])
-    E_ref_df.set_index('idx', inplace=True)
-
-    mace_data = read(f_mace, index=':')
+        for atom_idx in range(len(fx)):
+            F_ref[f'{idx}_{cat}_{atom_idx}'] = fx[atom_idx]
+   
+    mace_data = read(file_mace, index=':')
     E_mace = {}
+    F_mace = {}
     for sys in mace_data:
         idx = ref_data.index(sys)
         cat = sys.info['category']
         n=len(sys.get_atomic_numbers())
         e = sys.info['MACE_energy']
         E_mace[f'{idx}_{cat}'] = e/n
-    E_mace_df = pd.DataFrame(list(E_mace.items()), columns=['idx', 'Mace'])
-    E_mace_df.set_index('idx', inplace=True)
-    df = pd.merge(E_ref_df, E_mace_df, left_index=True, right_index=True, how='outer')
-    return df
+        force = sys.arrays['MACE_forces']
+        fx = force[:,0]
+        for atom_idx in range(len(fx)):
+            F_mace[f'{idx}_{cat}_{atom_idx}'] = fx[atom_idx]
 
+    E_df = pd.DataFrame([E_ref, E_mace]).T.rename(columns={0: 'E_ref', 1: 'E_mace'})
+    F_df = pd.DataFrame([F_ref, F_mace]).T.rename(columns={0: 'F_ref', 1: 'F_mace'})
+    return E_df, F_df
+ 
 
-def get_high_E_err_systems(_dir, f_ref, err_threshold):
+def get_err_during_training(_dir, file_ref):
     '''
-    returns a pd.df of systems which their error is higher than a threshold during training
+    returns a pd.df of systems whith their error during training.
+    _dir: directory containing validation files
+    file_ref: DFT ref file (dataset) 
     '''
-    high_err_df = pd.DataFrame([])
+    E_err_df = pd.DataFrame()
+    F_err_df = pd.DataFrame()
     files = os.listdir(_dir)
-    files = [f for f in files if f.endswith('.model.xyz')]
+    files = [f for f in files if f.endswith('.xyz') and re.search(r'\d', f)]
 
-    epochs = sorted([int(f.replace('output_', '').replace('_swa.model.xyz', '')) for f in files])
-    epochs = epochs[::2]
+    epochs = sorted([int(re.findall(r'\d+', f)[0]) for f in files])
+    epochs = epochs[::4]
     for epoch in epochs:
-        df = validate_mace(f_ref, os.path.join(_dir, f'output_{epoch}_swa.model.xyz'))
-        err = df[abs((df['Ref'] - df['Mace']))> err_threshold]
+        print(f'validating {epoch}', flush= True)
+        E_df, F_df = validate_mace(file_ref, os.path.join(_dir, f'output_{epoch}.xyz'))
+        E_err = abs(E_df['E_ref'] - E_df['E_mace'])
+        F_err = abs(F_df['F_ref'] - F_df['F_mace'])
         if epoch == epochs[0]:
-            high_err_df[f'error_{epoch}'] = df.index.str
-        high_err_df[f'error_{epoch}'] = abs((err['Ref'] - err['Mace']))
-
-    columns = [f'error_{epoch}' for epoch in epochs]
-    high_err_df_final = high_err_df.dropna(subset=columns)
-    for c in columns[:]:
-        plt.hist(high_err_df_final[c], label = c, histtype=u'step', density=True)
-    plt.legend()
-    plt.yscale('log')
-    return high_err_df_final
+            E_err_df['file_name'] = E_df.index.astype(str)
+            F_err_df['file_name'] = F_df.index.astype(str)
+        E_err_df[f'error_{epoch}'] = E_err.values
+        F_err_df[f'error_{epoch}'] = F_err.values
+    E_err_df.set_index('file_name', inplace=True)
+    F_err_df.set_index('file_name', inplace=True)
+    E_err_df_final = E_err_df.dropna()
+    F_err_df_final = F_err_df.dropna()
+    return E_err_df_final, F_err_df_final
 
