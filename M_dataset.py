@@ -480,7 +480,7 @@ class LR(nn.Module):
                 return y_pred
 
 
-def l_reg(x, y, n, lr = 0.1, thr = 10.0):
+def l_reg(x, y, n, lr = 0.02):
     model = LR(n)
     criterion = nn.L1Loss()
     optimizer = torch.optim.SGD(model.parameters(), lr = lr)
@@ -491,6 +491,7 @@ def l_reg(x, y, n, lr = 0.1, thr = 10.0):
     old_loss = 0
     new_loss = 2000
     epoch = 0
+    thr = 0.1
     while abs(new_loss - old_loss) > thr:
         old_loss = new_loss
         pred_y = model(x)
@@ -555,7 +556,9 @@ class xyz_to_example:
         try:
             category = structure[0].info['category']
         except KeyError: 
-            category = 'activatedCo2Flakes'
+            category = 'unknown'
+        #if (energy/natoms) > 0:
+        #    continue
         if self.f_filter:
             if High_force_sys(force):
                 pass
@@ -632,14 +635,15 @@ class xyz_to_example:
             
         os.chdir(self.path + f'{self.file.split(".")[0]}_examples')
  
-        for idx in range(all_idx):
+        for idx in range(2300, all_idx):
             data = self.read_system(idx)
             # remove systems containing N
-            if 7 in data[2]:
-                continue
+            #if 7 in data[2]:
+            #    continue
             if data:
                 self.dump_json(idx, data)
                 ref_energy.append([data[2], data[4]])
+        os.chdir(self.path)
         self.ref_atomic_energy(ref_energy)
 
         if self.File:
