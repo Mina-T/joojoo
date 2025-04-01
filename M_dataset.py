@@ -650,5 +650,3 @@ class xyz_to_example:
             self.File.close()
             os.chdir(self.path)
         
-
-
