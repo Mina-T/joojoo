@@ -491,7 +491,9 @@ def l_reg(x, y, n, lr = 0.02):
     old_loss = 0
     new_loss = 2000
     epoch = 0
-    thr = 0.1
+    old_loss = 0
+    new_loss = 2000
+    thr = 0.01
     while abs(new_loss - old_loss) > thr:
         old_loss = new_loss
         pred_y = model(x)
@@ -650,3 +652,5 @@ class xyz_to_example:
             self.File.close()
             os.chdir(self.path)
         
+
+
